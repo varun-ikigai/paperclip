@@ -1,0 +1,42 @@
+# Production infrastructure — Postgres + Caddy only.
+# The Paperclip server runs on the host (via systemd) so agents like
+# OpenCode, gws CLI, puppeteer, etc. can be installed natively.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Requires:
+#   - Caddyfile in the same directory (see deploy/Caddyfile.example)
+#   - Paperclip server running on host port 3100
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: paperclip
+      POSTGRES_DB: paperclip
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:

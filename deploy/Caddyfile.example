@@ -1,0 +1,6 @@
+# Replace with your domain. Caddy handles HTTPS automatically via Let's Encrypt.
+# Ensure your DNS A/AAAA record points to this server before starting.
+
+your-domain.example.com {
+    reverse_proxy localhost:3100
+}

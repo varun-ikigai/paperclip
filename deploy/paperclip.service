@@ -1,0 +1,17 @@
+[Unit]
+Description=Paperclip Server
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/apps/paperclip
+EnvironmentFile=/root/apps/paperclip/.env
+ExecStart=/usr/bin/node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=HOME=/root
+
+[Install]
+WantedBy=multi-user.target

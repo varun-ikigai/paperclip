@@ -221,10 +221,91 @@ This starts the API server at `http://localhost:3100`. An embedded PostgreSQL da
 
 <br/>
 
+## Production Deployment
+
+The recommended production setup splits infrastructure (Docker) from the application (host):
+
+| Component | Where | Why |
+|-----------|-------|-----|
+| **Postgres** | Docker | Managed lifecycle, persistent volumes |
+| **Caddy** | Docker | Auto-HTTPS via Let's Encrypt |
+| **Paperclip server** | Host (systemd) | Agents spawn as child processes |
+| **Agent tools** | Host | OpenCode, gws CLI, puppeteer, etc. installed natively |
+
+Running the server on the host means agents can use any tool without bloating a Docker image. Install puppeteer, gws CLI, or any future tool directly — no container rebuilds needed.
+
+### Setup
+
+```bash
+# 1. Clone and build
+git clone https://github.com/paperclipai/paperclip.git /root/apps/paperclip
+cd /root/apps/paperclip
+corepack install && pnpm install --frozen-lockfile
+pnpm --filter @paperclipai/shared build
+pnpm --filter @paperclipai/db build
+pnpm --filter @paperclipai/adapter-utils build
+pnpm --filter @paperclipai/adapter-opencode-local build
+pnpm --filter @paperclipai/ui build
+pnpm --filter @paperclipai/server build
+
+# 2. Install agent tools
+npm install -g opencode-ai
+
+# 3. Configure
+cp deploy/.env.example .env
+cp deploy/Caddyfile.example Caddyfile
+# Edit .env — set BETTER_AUTH_SECRET (openssl rand -hex 32) and your domain
+# Edit Caddyfile — set your domain
+
+# 4. Start infrastructure
+docker compose -f docker-compose.prod.yml up -d
+
+# 5. Install and start the server service
+cp deploy/paperclip.service /etc/systemd/system/
+systemctl daemon-reload && systemctl enable paperclip && systemctl start paperclip
+
+# 6. Onboard
+node --import ./server/node_modules/tsx/dist/loader.mjs cli/src/index.ts onboard
+```
+
+### Managing the deployment
+
+```bash
+# Server logs
+journalctl -u paperclip -f
+
+# Restart server
+systemctl restart paperclip
+
+# Update to latest
+cd /root/apps/paperclip && git pull
+pnpm --filter @paperclipai/shared build
+pnpm --filter @paperclipai/db build
+pnpm --filter @paperclipai/adapter-utils build
+pnpm --filter @paperclipai/adapter-opencode-local build
+pnpm --filter @paperclipai/ui build
+pnpm --filter @paperclipai/server build
+systemctl restart paperclip
+```
+
+### Docker-only deployment
+
+If you prefer everything in Docker (simpler but agents can't install host tools):
+
+```bash
+# All-in-one with external Postgres
+BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose up -d
+
+# Or single container with embedded PGlite
+BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose -f docker-compose.quickstart.yml up -d
+```
+
+<br/>
+
 ## FAQ
 
 **What does a typical setup look like?**
-Locally, a single Node.js process manages an embedded Postgres and local file storage. For production, point it at your own Postgres and deploy however you like. Configure projects, agents, and goals — the agents take care of the rest.
+For development, a single Node.js process manages an embedded Postgres and local file storage. For production, we recommend running Postgres and Caddy in Docker while the Paperclip server runs directly on the host — this lets agents install and use any tool (puppeteer, gws CLI, etc.) without container constraints.
 
 If you're a solo-entreprenuer you can use Tailscale to access Paperclip on the go. Then later you can deploy to e.g. Vercel when you need it.
 
