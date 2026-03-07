@@ -5,6 +5,7 @@ import {
   ensurePathInEnv,
   runChildProcess,
 } from "@paperclipai/adapter-utils/server-utils";
+import { models as staticModels } from "../index.js";
 
 const MODELS_CACHE_TTL_MS = 60_000;
 
@@ -162,6 +163,11 @@ export async function ensureOpenCodeModelConfiguredAndAvailable(input: {
     throw new Error("OpenCode requires `adapterConfig.model` in provider/model format.");
   }
 
+  // Check static models first — if it matches, we can skip CLI discovery
+  if (staticModels.some((entry) => entry.id === model)) {
+    return staticModels;
+  }
+
   const models = await discoverOpenCodeModelsCached({
     command: input.command,
     cwd: input.cwd,
@@ -184,9 +190,10 @@ export async function ensureOpenCodeModelConfiguredAndAvailable(input: {
 
 export async function listOpenCodeModels(): Promise<AdapterModel[]> {
   try {
-    return await discoverOpenCodeModelsCached();
+    const discovered = await discoverOpenCodeModelsCached();
+    return sortModels(dedupeModels([...staticModels, ...discovered]));
   } catch {
-    return [];
+    return sortModels(dedupeModels([...staticModels]));
   }
 }
 

@@ -57,6 +57,7 @@ It looks like a task manager — but under the hood it has org charts, budgets, 
     <td align="center"><img src="doc/assets/logos/cursor.svg" width="32" alt="Cursor" /><br/><sub>Cursor</sub></td>
     <td align="center"><img src="doc/assets/logos/bash.svg" width="32" alt="Bash" /><br/><sub>Bash</sub></td>
     <td align="center"><img src="doc/assets/logos/http.svg" width="32" alt="HTTP" /><br/><sub>HTTP</sub></td>
+    <td align="center"><img src="doc/assets/logos/opencode.svg" width="32" alt="OpenCode" /><br/><sub>OpenCode</sub></td>
   </tr>
 </table>
 
@@ -169,6 +170,34 @@ Paperclip handles the hard orchestration details correctly.
 
 <br/>
 
+## OpenCode + OpenRouter Integration
+
+Paperclip supports [OpenCode](https://opencode.ai) as an agent runtime with curated **Zero Data Retention (ZDR)** models via [OpenRouter](https://openrouter.ai). This gives you access to frontier models with enterprise-grade data privacy — no training on your data.
+
+### Available ZDR Models
+
+| Model | Provider |
+|---|---|
+| Claude Opus 4.6 | Anthropic |
+| Claude Sonnet 4.6 | Anthropic |
+| Claude Haiku 4.6 | Anthropic |
+| MiniMax M2.5 | MiniMax |
+| GLM 5 | Zhipu |
+| Gemini 3 | Google |
+
+### Setup
+
+1. Install [OpenCode](https://opencode.ai) CLI
+2. Set your OpenRouter API key:
+   ```bash
+   export OPENROUTER_API_KEY=sk-or-...
+   ```
+3. Select **OpenCode (local)** during onboarding and pick a ZDR model
+
+Costs are calculated server-side using OpenRouter's live pricing API — not adapter-reported estimates. Per-agent API keys are supported for individual cost tracking.
+
+<br/>
+
 ## Quickstart
 
 Open source. Self-hosted. No Paperclip account required.
@@ -233,6 +262,9 @@ See [doc/DEVELOPING.md](doc/DEVELOPING.md) for the full development guide.
 
 ## Roadmap
 
+- ✅ OpenCode as agent platform with OpenRouter ZDR models
+- ✅ Server-side cost verification via OpenRouter pricing API
+- ⚪ Google Workspace integration via `gws` CLI — agents operate on Docs, Sheets, Slides with approval gates for destructive actions
 - ⚪ Get OpenClaw onboarding easier
 - ⚪ Get cloud agents working e.g. Cursor / e2b agents
 - ⚪ ClipMart - buy and sell entire agent companies

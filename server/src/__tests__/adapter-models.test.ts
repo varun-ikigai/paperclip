@@ -95,10 +95,11 @@ describe("adapter model listing", () => {
     expect(first.some((model) => model.id === "composer-1")).toBe(true);
   });
 
-  it("returns no opencode models when opencode command is unavailable", async () => {
+  it("returns static ZDR models when opencode command is unavailable", async () => {
     process.env.PAPERCLIP_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
 
     const models = await listAdapterModels("opencode_local");
-    expect(models).toEqual([]);
+    expect(models.length).toBeGreaterThanOrEqual(6);
+    expect(models.some((m) => m.id === "openrouter/anthropic/claude-opus-4.6")).toBe(true);
   });
 });

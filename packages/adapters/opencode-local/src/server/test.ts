@@ -13,6 +13,7 @@ import {
   runChildProcess,
 } from "@paperclipai/adapter-utils/server-utils";
 import { discoverOpenCodeModels, ensureOpenCodeModelConfiguredAndAvailable } from "./models.js";
+import { isOpenRouterModel } from "./execute.js";
 import { parseOpenCodeJsonl } from "./parse.js";
 
 function summarizeStatus(checks: AdapterEnvironmentCheck[]): AdapterEnvironmentTestResult["status"] {
@@ -166,6 +167,24 @@ export async function testEnvironment(
         level: "error",
         message: err instanceof Error ? err.message : "Configured model is unavailable.",
         hint: "Run `opencode models` and choose a currently available provider/model ID.",
+      });
+    }
+  }
+
+  // Check for OPENROUTER_API_KEY when using an OpenRouter model
+  if (configuredModel && isOpenRouterModel(configuredModel)) {
+    const envConfig = parseObject(config.env);
+    const hasOpenRouterKey = Boolean(
+      envConfig.OPENROUTER_API_KEY ||
+      process.env.OPENROUTER_API_KEY
+    );
+    if (!hasOpenRouterKey) {
+      checks.push({
+        code: "openrouter_api_key_missing",
+        level: "warn",
+        message: "OPENROUTER_API_KEY not found",
+        detail: `Model "${configuredModel}" is an OpenRouter ZDR model. Set OPENROUTER_API_KEY in the agent environment variables or as a global environment variable.`,
+        hint: "Add OPENROUTER_API_KEY to the agent's env configuration, preferably as a secret reference.",
       });
     }
   }

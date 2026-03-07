@@ -18,6 +18,7 @@ import {
 } from "@paperclipai/adapter-utils/server-utils";
 import { isOpenCodeUnknownSessionError, parseOpenCodeJsonl } from "./parse.js";
 import { ensureOpenCodeModelConfiguredAndAvailable } from "./models.js";
+import { models as staticZdrModels } from "../index.js";
 
 const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const PAPERCLIP_SKILLS_CANDIDATES = [
@@ -39,6 +40,10 @@ function parseModelProvider(model: string | null): string | null {
   const trimmed = model.trim();
   if (!trimmed.includes("/")) return null;
   return trimmed.slice(0, trimmed.indexOf("/")).trim() || null;
+}
+
+export function isOpenRouterModel(modelId: string): boolean {
+  return staticZdrModels.some((m) => m.id === modelId);
 }
 
 function claudeSkillsHome(): string {
@@ -163,6 +168,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       (entry): entry is [string, string] => typeof entry[1] === "string",
     ),
   );
+  if (model && isOpenRouterModel(model) && !runtimeEnv.OPENROUTER_API_KEY) {
+    await onLog(
+      "stderr",
+      `[paperclip] Warning: OpenRouter model "${model}" is configured but OPENROUTER_API_KEY is not set in agent env. Add it to adapterConfig.env or set it globally.\n`,
+    );
+  }
   await ensureCommandResolvable(command, cwd, runtimeEnv);
 
   await ensureOpenCodeModelConfiguredAndAvailable({

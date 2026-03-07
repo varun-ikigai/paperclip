@@ -23,6 +23,7 @@ import { createLocalAgentJwt } from "../agent-auth-jwt.js";
 import { parseObject, asBoolean, asNumber, appendWithCap, MAX_EXCERPT_BYTES } from "../adapters/utils.js";
 import { secretService } from "./secrets.js";
 import { resolveDefaultAgentWorkspaceDir } from "../home-paths.js";
+import { calculateOpenRouterCostUsd, isOpenRouterModelId } from "./openrouter-pricing.js";
 
 const MAX_LIVE_LOG_CHUNK_BYTES = 8 * 1024;
 const HEARTBEAT_MAX_CONCURRENT_RUNS_DEFAULT = 1;
@@ -957,8 +958,34 @@ export function heartbeatService(db: Db) {
     const inputTokens = usage?.inputTokens ?? 0;
     const outputTokens = usage?.outputTokens ?? 0;
     const cachedInputTokens = usage?.cachedInputTokens ?? 0;
-    const additionalCostCents = Math.max(0, Math.round((result.costUsd ?? 0) * 100));
     const hasTokenUsage = inputTokens > 0 || outputTokens > 0 || cachedInputTokens > 0;
+
+    // For OpenRouter models, calculate cost from OpenRouter's pricing API
+    // rather than trusting the adapter-reported cost.
+    const modelId = result.model ?? "";
+    const adapterCostUsd = result.costUsd ?? 0;
+    let resolvedCostUsd = adapterCostUsd;
+
+    if (isOpenRouterModelId(modelId) && hasTokenUsage) {
+      const openRouterCostUsd = await calculateOpenRouterCostUsd(modelId, inputTokens, outputTokens);
+      if (openRouterCostUsd != null) {
+        resolvedCostUsd = openRouterCostUsd;
+        const delta = Math.abs(openRouterCostUsd - adapterCostUsd);
+        if (delta > 0.001) {
+          logger.info(
+            { modelId, adapterCostUsd, openRouterCostUsd, delta, runId: run.id },
+            "Cost discrepancy between adapter and OpenRouter pricing",
+          );
+        }
+      } else {
+        logger.debug(
+          { modelId, runId: run.id },
+          "OpenRouter pricing unavailable; falling back to adapter-reported cost",
+        );
+      }
+    }
+
+    const additionalCostCents = Math.max(0, Math.round(resolvedCostUsd * 100));
 
     await db
       .update(agentRuntimeState)
