@@ -34,6 +34,8 @@ tmp/
 
 # Editor / tool temp files
 *.tmp
+*.swp
+*.swo
 .vscode/
 .claude/settings.local.json
 .paperclip-local/
