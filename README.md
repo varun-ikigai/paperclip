@@ -251,20 +251,24 @@ pnpm --filter @paperclipai/server build
 # 2. Install agent tools
 npm install -g opencode-ai
 
-# 3. Configure
+# 3. Configure OpenCode permissions (allows agents to access Paperclip workspaces)
+mkdir -p ~/.config/opencode
+cp deploy/opencode.json ~/.config/opencode/opencode.json
+
+# 4. Configure
 cp deploy/.env.example .env
 cp deploy/Caddyfile.example Caddyfile
 # Edit .env — set BETTER_AUTH_SECRET (openssl rand -hex 32) and your domain
 # Edit Caddyfile — set your domain
 
-# 4. Start infrastructure
+# 5. Start infrastructure
 docker compose -f docker-compose.prod.yml up -d
 
-# 5. Install and start the server service
+# 6. Install and start the server service
 cp deploy/paperclip.service /etc/systemd/system/
 systemctl daemon-reload && systemctl enable paperclip && systemctl start paperclip
 
-# 6. Onboard
+# 7. Onboard
 node --import ./server/node_modules/tsx/dist/loader.mjs cli/src/index.ts onboard
 ```
 
