@@ -36,6 +36,12 @@ Paperclip supports three deployment configurations, from zero-friction local to 
 - Stricter security checks
 - Best for: cloud hosting, internet-facing deployment
 
+## Deployment Guides
+
+- [Docker](./docker.md) — Docker Compose quickstart
+- [Bare Metal / VPS](./bare-metal.md) — systemd service on a Linux server
+- [Tailscale Private Access](./tailscale-private-access.md) — Private network setup
+
 ## Choosing a Mode
 
 - **Just trying Paperclip?** Use `local_trusted` (the default)

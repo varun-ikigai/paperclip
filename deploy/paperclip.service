@@ -8,7 +8,7 @@ Type=simple
 WorkingDirectory=/root/apps/paperclip
 EnvironmentFile=/root/apps/paperclip/.env
 ExecStart=/usr/bin/node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
-Restart=on-failure
+Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=HOME=/root
