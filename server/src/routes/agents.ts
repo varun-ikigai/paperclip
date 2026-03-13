@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import fs from "node:fs/promises";
 import type { Db } from "@paperclipai/db";
 import { agents as agentsTable, companies, heartbeatRuns } from "@paperclipai/db";
 import { and, desc, eq, inArray, not, sql } from "drizzle-orm";
@@ -568,6 +569,61 @@ export function agentRoutes(db: Db) {
         sessionParamsJson: redactEventPayload(session.sessionParamsJson ?? null),
       })),
     );
+  });
+
+  router.get("/agents/:id/workspace/list", async (req, res) => {
+    assertBoard(req);
+    const id = req.params.id as string;
+    const agent = await svc.getById(id);
+    if (!agent) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, agent.companyId);
+
+    const config = asRecord(agent.adapterConfig) ?? {};
+    const cwd = asNonEmptyString(config.cwd);
+    if (!cwd) {
+      res.json({ cwd: null, entries: [] });
+      return;
+    }
+
+    async function listDir(dirPath: string, relativePath: string): Promise<WorkspaceEntry[]> {
+      let items: string[];
+      try {
+        items = await fs.readdir(dirPath);
+      } catch {
+        return [];
+      }
+      const entries: WorkspaceEntry[] = [];
+      for (const name of items.sort()) {
+        const fullPath = path.join(dirPath, name);
+        const relPath = relativePath ? `${relativePath}/${name}` : name;
+        let stat;
+        try {
+          stat = await fs.stat(fullPath);
+        } catch {
+          continue;
+        }
+        if (stat.isDirectory()) {
+          entries.push({ name, path: relPath, type: "directory", children: [] });
+        } else {
+          entries.push({ name, path: relPath, type: "file", size: stat.size });
+        }
+      }
+      return entries;
+    }
+
+    interface WorkspaceEntry {
+      name: string;
+      path: string;
+      type: "file" | "directory";
+      size?: number;
+      children?: WorkspaceEntry[];
+    }
+
+    const entries = await listDir(cwd, "");
+    res.json({ cwd, entries });
   });
 
   router.post("/agents/:id/runtime-state/reset-session", validate(resetAgentSessionSchema), async (req, res) => {

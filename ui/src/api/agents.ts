@@ -40,6 +40,19 @@ export interface OrgNode {
   reports: OrgNode[];
 }
 
+export interface WorkspaceEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size?: number;
+  children?: WorkspaceEntry[];
+}
+
+export interface WorkspaceListResult {
+  cwd: string | null;
+  entries: WorkspaceEntry[];
+}
+
 export interface AgentHireResponse {
   agent: Agent;
   approval: Approval | null;
@@ -144,4 +157,6 @@ export const agentsApi = {
   ) => api.post<HeartbeatRun | { status: "skipped" }>(agentPath(id, companyId, "/wakeup"), data),
   loginWithClaude: (id: string, companyId?: string) =>
     api.post<ClaudeLoginResult>(agentPath(id, companyId, "/claude-login"), {}),
+  workspaceList: (id: string, companyId?: string) =>
+    api.get<WorkspaceListResult>(agentPath(id, companyId, "/workspace/list")),
 };

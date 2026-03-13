@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useBeforeUnload } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { agentsApi, type AgentKey, type ClaudeLoginResult } from "../api/agents";
 import { heartbeatsApi } from "../api/heartbeats";
+import { FileTree } from "../components/FileTree";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { activityApi } from "../api/activity";
 import { issuesApi } from "../api/issues";
@@ -52,6 +53,8 @@ import {
   ChevronDown,
   ArrowLeft,
   Settings,
+  FolderOpen,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AgentIcon, AgentIconPicker } from "../components/AgentIconPicker";
@@ -171,11 +174,12 @@ function scrollToContainerBottom(container: ScrollContainer, behavior: ScrollBeh
   container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
-type AgentDetailView = "overview" | "configure" | "runs";
+type AgentDetailView = "overview" | "configure" | "runs" | "files";
 
 function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "configure" || value === "configuration") return "configure";
   if (value === "runs") return value;
+  if (value === "files") return value;
   return "overview";
 }
 
@@ -406,6 +410,8 @@ export function AgentDetail() {
         crumbs.push({ label: "Configure" });
       } else if (activeView === "runs") {
         crumbs.push({ label: "Runs" });
+      } else if (activeView === "files") {
+        crumbs.push({ label: "Files" });
       }
     }
     setBreadcrumbs(crumbs);
@@ -620,6 +626,37 @@ export function AgentDetail() {
         </div>
       )}
 
+      {/* Tab navigation */}
+      {!urlRunId && (
+        <div className="flex gap-1 border-b border-border -mb-2">
+          {(["overview", "runs", "files", "configure"] as const).map((view) => {
+            const labels: Record<string, string> = {
+              overview: "Overview",
+              runs: "Runs",
+              files: "Files",
+              configure: "Configure",
+            };
+            const href = view === "overview"
+              ? `/agents/${canonicalAgentRef}`
+              : `/agents/${canonicalAgentRef}/${view}`;
+            return (
+              <Link
+                key={view}
+                to={href}
+                className={cn(
+                  "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors no-underline",
+                  activeView === view
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                )}
+              >
+                {labels[view]}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       {/* View content */}
       {activeView === "overview" && (
         <AgentOverview
@@ -656,6 +693,81 @@ export function AgentDetail() {
           selectedRunId={urlRunId ?? null}
           adapterType={agent.adapterType}
         />
+      )}
+
+      {activeView === "files" && (
+        <FilesTab agentId={agent.id} companyId={resolvedCompanyId ?? undefined} />
+      )}
+    </div>
+  );
+}
+
+/* ---- Files Tab ---- */
+
+function FilesTab({ agentId, companyId }: { agentId: string; companyId?: string }) {
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: queryKeys.agents.workspaceList(agentId),
+    queryFn: () => agentsApi.workspaceList(agentId, companyId),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading workspace…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-sm text-destructive py-4">
+        Failed to load workspace: {error instanceof Error ? error.message : "Unknown error"}
+      </p>
+    );
+  }
+
+  const cwd = data?.cwd ?? null;
+  const entries = data?.entries ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Workspace Files</h3>
+          {cwd && (
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">{cwd}</p>
+          )}
+        </div>
+        <button
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+          Refresh
+        </button>
+      </div>
+
+      {!cwd ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-border rounded-lg">
+          <div className="bg-muted/50 p-4 mb-4 rounded-lg">
+            <FolderOpen className="h-10 w-10 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm text-muted-foreground">No working directory configured for this agent.</p>
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-border rounded-lg">
+          <div className="bg-muted/50 p-4 mb-4 rounded-lg">
+            <FolderOpen className="h-10 w-10 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm text-muted-foreground">The working directory is empty.</p>
+        </div>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden">
+          <FileTree entries={entries} />
+        </div>
       )}
     </div>
   );
