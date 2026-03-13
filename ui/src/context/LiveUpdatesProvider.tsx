@@ -310,6 +310,7 @@ function invalidateHeartbeatQueries(
   if (agentId) {
     queryClient.invalidateQueries({ queryKey: queryKeys.agents.detail(agentId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId, agentId) });
+    queryClient.invalidateQueries({ queryKey: ["heartbeats", "paginated", companyId, agentId] });
   }
 }
 

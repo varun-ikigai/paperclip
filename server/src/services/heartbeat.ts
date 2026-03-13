@@ -2095,7 +2095,7 @@ export function heartbeatService(db: Db) {
   }
 
   return {
-    list: (companyId: string, agentId?: string, limit?: number) => {
+    list: (companyId: string, agentId?: string, limit?: number, offset?: number) => {
       const query = db
         .select()
         .from(heartbeatRuns)
@@ -2106,10 +2106,24 @@ export function heartbeatService(db: Db) {
         )
         .orderBy(desc(heartbeatRuns.createdAt));
 
+      if (offset) {
+        query.offset(offset);
+      }
       if (limit) {
         return query.limit(limit);
       }
       return query;
+    },
+
+    count: async (companyId: string, agentId?: string): Promise<number> => {
+      const condition = agentId
+        ? and(eq(heartbeatRuns.companyId, companyId), eq(heartbeatRuns.agentId, agentId))
+        : eq(heartbeatRuns.companyId, companyId);
+      const [row] = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(heartbeatRuns)
+        .where(condition);
+      return row?.count ?? 0;
     },
 
     getRun,

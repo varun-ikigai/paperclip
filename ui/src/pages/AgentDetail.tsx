@@ -686,7 +686,6 @@ export function AgentDetail() {
 
       {activeView === "runs" && (
         <RunsTab
-          runs={heartbeats ?? []}
           companyId={resolvedCompanyId!}
           agentId={agent.id}
           agentRouteId={canonicalAgentRef}
@@ -1377,15 +1376,15 @@ function RunListItem({ run, isSelected, agentId }: { run: HeartbeatRun; isSelect
   );
 }
 
+const RUNS_PAGE_SIZE = 5;
+
 function RunsTab({
-  runs,
   companyId,
   agentId,
   agentRouteId,
   selectedRunId,
   adapterType,
 }: {
-  runs: HeartbeatRun[];
   companyId: string;
   agentId: string;
   agentRouteId: string;
@@ -1393,19 +1392,61 @@ function RunsTab({
   adapterType: string;
 }) {
   const { isMobile } = useSidebar();
+  const [page, setPage] = useState(0);
 
-  if (runs.length === 0) {
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: queryKeys.heartbeatsPaginated(companyId, agentId, page),
+    queryFn: () => heartbeatsApi.listPaginated(companyId, agentId, RUNS_PAGE_SIZE, page * RUNS_PAGE_SIZE),
+    placeholderData: (prev) => prev,
+  });
+
+  const runs = data?.runs ?? [];
+  const total = data?.total ?? 0;
+  const hasMore = data?.hasMore ?? false;
+  const hasPrev = page > 0;
+  const totalPages = Math.max(1, Math.ceil(total / RUNS_PAGE_SIZE));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading runs…
+      </div>
+    );
+  }
+
+  if (runs.length === 0 && page === 0) {
     return <p className="text-sm text-muted-foreground">No runs yet.</p>;
   }
 
-  // Sort by created descending
-  const sorted = [...runs].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
   // On mobile, don't auto-select so the list shows first; on desktop, auto-select latest
-  const effectiveRunId = isMobile ? selectedRunId : (selectedRunId ?? sorted[0]?.id ?? null);
-  const selectedRun = sorted.find((r) => r.id === effectiveRunId) ?? null;
+  const effectiveRunId = isMobile ? selectedRunId : (selectedRunId ?? runs[0]?.id ?? null);
+  const selectedRun = runs.find((r) => r.id === effectiveRunId) ?? null;
+
+  const paginationControls = (total > RUNS_PAGE_SIZE) && (
+    <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
+      <span>
+        {page * RUNS_PAGE_SIZE + 1}–{Math.min((page + 1) * RUNS_PAGE_SIZE, total)} of {total} runs
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          disabled={!hasPrev || isFetching}
+          onClick={() => setPage((p) => p - 1)}
+          className="px-2 py-1 rounded hover:bg-sidebar-accent/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          ← Newer
+        </button>
+        <span className="px-1.5">{page + 1}/{totalPages}</span>
+        <button
+          disabled={!hasMore || isFetching}
+          onClick={() => setPage((p) => p + 1)}
+          className="px-2 py-1 rounded hover:bg-sidebar-accent/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          Older →
+        </button>
+      </div>
+    </div>
+  );
 
   // Mobile: show either run list OR run detail with back button
   if (isMobile) {
@@ -1425,9 +1466,10 @@ function RunsTab({
     }
     return (
       <div className="border border-border rounded-lg overflow-x-hidden">
-        {sorted.map((run) => (
+        {runs.map((run) => (
           <RunListItem key={run.id} run={run} isSelected={false} agentId={agentRouteId} />
         ))}
+        {paginationControls}
       </div>
     );
   }
@@ -1441,9 +1483,10 @@ function RunsTab({
         selectedRun ? "w-72" : "w-full",
       )}>
         <div className="sticky top-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 2rem)" }}>
-        {sorted.map((run) => (
-          <RunListItem key={run.id} run={run} isSelected={run.id === effectiveRunId} agentId={agentRouteId} />
-        ))}
+          {runs.map((run) => (
+            <RunListItem key={run.id} run={run} isSelected={run.id === effectiveRunId} agentId={agentRouteId} />
+          ))}
+          {paginationControls}
         </div>
       </div>
 
@@ -1474,6 +1517,7 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
     mutationFn: () => heartbeatsApi.cancel(run.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(run.companyId, run.agentId) });
+      queryClient.invalidateQueries({ queryKey: ["heartbeats", "paginated", run.companyId, run.agentId] });
     },
   });
   const canResumeLostRun = run.errorCode === "process_lost" && run.status === "failed";
@@ -1508,6 +1552,7 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
     },
     onSuccess: (resumedRun) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(run.companyId, run.agentId) });
+      queryClient.invalidateQueries({ queryKey: ["heartbeats", "paginated", run.companyId, run.agentId] });
       navigate(`/agents/${agentRouteId}/runs/${resumedRun.id}`);
     },
   });
@@ -1540,6 +1585,7 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
     },
     onSuccess: (newRun) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(run.companyId, run.agentId) });
+      queryClient.invalidateQueries({ queryKey: ["heartbeats", "paginated", run.companyId, run.agentId] });
       navigate(`/agents/${agentRouteId}/runs/${newRun.id}`);
     },
   });

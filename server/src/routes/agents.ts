@@ -1303,9 +1303,18 @@ export function agentRoutes(db: Db) {
     assertCompanyAccess(req, companyId);
     const agentId = req.query.agentId as string | undefined;
     const limitParam = req.query.limit as string | undefined;
+    const offsetParam = req.query.offset as string | undefined;
+    const paginated = req.query.paginated === "true";
     const limit = limitParam ? Math.max(1, Math.min(1000, parseInt(limitParam, 10) || 200)) : undefined;
-    const runs = await heartbeat.list(companyId, agentId, limit);
-    res.json(runs);
+    const offset = offsetParam ? Math.max(0, parseInt(offsetParam, 10) || 0) : undefined;
+    const runs = await heartbeat.list(companyId, agentId, limit, offset);
+    if (paginated && limit) {
+      const total = await heartbeat.count(companyId, agentId);
+      const nextOffset = (offset ?? 0) + runs.length;
+      res.json({ runs, total, hasMore: nextOffset < total });
+    } else {
+      res.json(runs);
+    }
   });
 
   router.get("/companies/:companyId/live-runs", async (req, res) => {
