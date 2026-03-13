@@ -55,40 +55,40 @@
   --color-ikigai-muted: #D8D0EA;
 }
 
-/* Ikigai dark-first brand theme */
+/* Ikigai dark-first theme — neutral dark surfaces, cyan primary actions */
 :root {
   --radius: 0.625rem;
-  --background: #0C0028;
-  --foreground: #FFFFFF;
-  --card: #161042;
-  --card-foreground: #FFFFFF;
-  --popover: #161042;
-  --popover-foreground: #FFFFFF;
-  --primary: #7822FF;
-  --primary-foreground: #FFFFFF;
-  --secondary: #332651;
-  --secondary-foreground: #FFFFFF;
-  --muted: #241D58;
-  --muted-foreground: #D8D0EA;
-  --accent: #241D58;
-  --accent-foreground: #FFFFFF;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --popover: #111113;
+  --popover-foreground: #fafafa;
+  --primary: #2DFFFF;
+  --primary-foreground: #09090b;
+  --secondary: #1e1e22;
+  --secondary-foreground: #fafafa;
+  --muted: #1a1a1f;
+  --muted-foreground: #a1a1aa;
+  --accent: #1a1a1f;
+  --accent-foreground: #fafafa;
   --destructive: #ED0000;
-  --border: #332651;
-  --input: #332651;
-  --ring: #7822FF;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #2DFFFF;
   --chart-1: #7822FF;
   --chart-2: #2DFFFF;
-  --chart-3: #D8D0EA;
-  --chart-4: #332651;
-  --chart-5: #050039;
-  --sidebar: #050039;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #7822FF;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #241D58;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #332651;
-  --sidebar-ring: #7822FF;
+  --chart-3: #a1a1aa;
+  --chart-4: #27272a;
+  --chart-5: #111113;
+  --sidebar: #0a0a0c;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #2DFFFF;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #1a1a1f;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #2DFFFF;
 }
 
 @layer base {
@@ -190,23 +190,23 @@
   }
 }
 
-/* Custom scrollbar — Ikigai dark theme */
+/* Custom scrollbar */
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #0C0028;
+  background: #09090b;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #332651;
+  background: #27272a;
   border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #7822FF;
+  background: #3f3f46;
 }
 
 /* Auto-hide scrollbar: transparent by default, visible on container hover */
@@ -214,10 +214,10 @@
   background: transparent !important;
 }
 .scrollbar-auto-hide:hover::-webkit-scrollbar-thumb {
-  background: #332651 !important;
+  background: #27272a !important;
 }
 .scrollbar-auto-hide:hover::-webkit-scrollbar-thumb:hover {
-  background: #7822FF !important;
+  background: #3f3f46 !important;
 }
 
 /* Expandable dialog transition for max-width changes */
